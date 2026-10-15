@@ -1,0 +1,31 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LUNEX demo</title>
+<style>
+body{margin:0;font:16px system-ui,sans-serif;background:#0b141a;color:#e9edef;display:flex;flex-direction:column;height:100dvh}
+header{padding:.8rem 1rem;background:#202c33;font-weight:600}header small{font-weight:400;color:#8696a0;margin-left:.5rem}
+#log{flex:1;overflow:auto;padding:1rem;display:flex;flex-direction:column;gap:.5rem}
+.m{max-width:80%;padding:.5rem .75rem;border-radius:12px;white-space:pre-wrap;word-wrap:break-word}
+.me{align-self:flex-end;background:#005c4b}.bot{align-self:flex-start;background:#202c33}.st{align-self:flex-start;color:#8696a0;font-size:.85rem}
+.src{display:block;font-size:.8rem;color:#53bdeb;margin-top:.3rem}
+form{display:flex;gap:.5rem;padding:.6rem;background:#202c33}input{flex:1;padding:.7rem;border-radius:20px;border:0;background:#2a3942;color:inherit;font:inherit}
+button{border:0;border-radius:20px;padding:.7rem 1.1rem;background:#00a884;color:#fff;font:inherit}
+</style></head><body>
+<header>LUNEX <small>local demo (development mode only)</small></header>
+<div id="log"></div>
+<form id="f"><input id="q" placeholder="Message LUNEX… (try /help)" autocomplete="off" maxlength="2000"><button>Send</button></form>
+<script type="module">
+import { LunexClient } from './lunex.js'
+const lunex = new LunexClient({ baseUrl: location.origin, getToken: async () => 'dev' })   // dev mode needs no real login
+const log = document.getElementById('log'), q = document.getElementById('q'); const history = []
+const add = (cls, text = '') => { const d = document.createElement('div'); d.className = 'm ' + cls; d.textContent = text; log.append(d); log.scrollTop = log.scrollHeight; return d }
+document.getElementById('f').onsubmit = async (e) => {
+  e.preventDefault(); const text = q.value.trim(); if (!text) return; q.value = ''
+  add('me', text); const bot = add('bot', '…'); let status = null; let first = true
+  try {
+    const r = await lunex.ask(text, { history, onStatus: (t) => { status ||= add('st'); status.textContent = t },
+      onDelta: (t) => { if (first) { bot.textContent = ''; first = false } bot.textContent += t; log.scrollTop = log.scrollHeight } })
+    history.push({ role: 'user', content: text }, { role: 'assistant', content: r.reply })
+    for (const s of r.sources) if (s.url) { const a = document.createElement('a'); a.className = 'src'; a.href = s.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = '↗ ' + s.title; bot.append(a) }
+  } catch (err) { bot.textContent = '⚠ ' + err.message } finally { status?.remove() }
+}
+</script></body></html>
